@@ -20,7 +20,15 @@ router.post('/register', [
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, email, password, number, location, role } = req.body;
+  const { name, email, password, number, location, role, adminCode } = req.body;
+
+  // Admin code validation
+  if (role === 'admin') {
+    const validAdminCode = process.env.ADMIN_CODE || 'admin_secret_2024';
+    if (adminCode !== validAdminCode) {
+      return res.status(403).json({ msg: 'Invalid admin code' });
+    }
+  }
 
   try {
     let user = await User.findOne({ email });

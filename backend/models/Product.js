@@ -24,10 +24,11 @@ const productSchema = new mongoose.Schema({
  
   // Status flow:
   // in stock    → Available for purchase (cooperatives pre-verified)
+  // in_transit  → Order placed and in delivery
   // sold        → All stock sold and delivered
   status: {
     type: String,
-    enum: ['in stock', 'sold'],
+    enum: ['in stock', 'in_transit', 'sold'],
     default: 'in stock',
   },
  

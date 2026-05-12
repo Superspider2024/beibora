@@ -15,7 +15,7 @@ router.post('/', auth, async (req, res) => {
 
   try {
     const product = await Product.findById(productId);
-    if (!product || product.status !== 'verified') {
+    if (!product || product.status !== 'in stock') {
       return res.status(400).json({ msg: 'Product not available' });
     }
 
@@ -27,11 +27,12 @@ router.post('/', auth, async (req, res) => {
 
     const order = new Order({
       buyer: req.user.id,
+      farmer: product.farmer,
       product: productId,
       quantity,
       totalPrice,
       mpesaCode,
-      status: 'awaiting_verification',
+      status: 'pending',
     });
 
     await order.save();
@@ -90,9 +91,18 @@ router.put('/:id/status', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Order not found' });
     }
 
-    // If status is in_transit, update product status
-    if (status === 'in_transit') {
+    // Update product status based on order status
+    if (status === 'delivering') {
       await Product.findByIdAndUpdate(order.product._id, { status: 'in_transit' });
+    } else if (status === 'delivered') {
+      // Check if all orders for this product are delivered, if so mark as sold
+      const pendingOrders = await Order.find({ 
+        product: order.product._id, 
+        status: { $ne: 'delivered' } 
+      });
+      if (pendingOrders.length === 0) {
+        await Product.findByIdAndUpdate(order.product._id, { status: 'sold' });
+      }
     }
 
     res.json(order);
