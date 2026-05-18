@@ -8,7 +8,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
   },
   password: {
     type: String,
@@ -54,5 +53,8 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+// Compound unique index: same email allowed for different roles
+userSchema.index({ email: 1, role: 1 }, { unique: true });
 
 module.exports = mongoose.model('User', userSchema);

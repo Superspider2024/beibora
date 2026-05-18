@@ -31,9 +31,9 @@ router.post('/register', [
   }
 
   try {
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email, role });
     if (user) {
-      return res.status(400).json({ msg: 'User already exists' });
+      return res.status(400).json({ msg: `A ${role} account with this email already exists` });
     }
 
     user = new User({
@@ -61,18 +61,19 @@ router.post('/register', [
 router.post('/login', [
   body('email').isEmail(),
   body('password').exists(),
+  body('role').isIn(['admin', 'buyer', 'farmer']),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email, role });
     if (!user) {
-      return res.status(400).json({ msg: 'Invalid credentials' });
+      return res.status(400).json({ msg: 'Invalid credentials for this role' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
