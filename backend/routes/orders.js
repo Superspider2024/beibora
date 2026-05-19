@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const auth = require('../middleware/auth');
@@ -13,13 +14,20 @@ router.post('/', auth, async (req, res) => {
 
   const { productId, quantity, mpesaCode } = req.body;
 
+  const session = await mongoose.startSession();
   try {
-    const product = await Product.findById(productId);
+    session.startTransaction();
+
+    const product = await Product.findById(productId).session(session);
     if (!product || product.status !== 'in stock') {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ msg: 'Product not available' });
     }
 
     if (product.stock < quantity) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ msg: 'Insufficient stock' });
     }
 
@@ -35,17 +43,23 @@ router.post('/', auth, async (req, res) => {
       status: 'pending',
     });
 
-    await order.save();
+    await order.save({ session });
 
     // Update product stock
     product.stock -= quantity;
     if (product.stock === 0) {
       product.status = 'sold';
     }
-    await product.save();
+    await product.save({ session });
 
-    res.json(order);
+    await session.commitTransaction();
+    session.endSession();
+
+    const populated = await Order.findById(order._id).populate('product');
+    res.json(populated);
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     console.error(err.message);
     res.status(500).send('Server error');
   }
