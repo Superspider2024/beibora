@@ -50,7 +50,15 @@ router.post('/register', [
     const payload = { user: { id: user.id, role: user.role } };
     const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '1h' });
 
-    res.json({ token });
+    res.json({
+      token,
+      role: user.role,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
